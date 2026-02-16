@@ -51,6 +51,9 @@ const dpadDownButton = document.querySelector(".dpad-down");
 const SWIPE_MIN_DISTANCE = 24;
 const DPAD_STORAGE_KEY = "snake_show_dpad";
 const i18n = createI18n();
+const themeColorMetaEl = document.querySelector('meta[name="theme-color"]');
+const THEME_COLOR_NORMAL = "#e7ecbf";
+const THEME_COLOR_MODAL = "#d8dcb3";
 const GAME_OVER_MESSAGES = {
   de: [
     "Das war knapp. Einmal tief durchatmen und direkt die naechste Runde starten.",
@@ -169,6 +172,27 @@ function closeAllModals() {
 function updateModalBackdrop() {
   const hasOpenModal = !controlsPopover.hidden || !gameOverModalEl.hidden;
   modalBackdropEl.hidden = !hasOpenModal;
+  document.body.classList.toggle("modal-open", hasOpenModal);
+  refreshThemeColor(hasOpenModal);
+}
+
+function refreshThemeColor(hasOpenModal) {
+  if (!themeColorMetaEl) {
+    return;
+  }
+
+  if (hasOpenModal) {
+    themeColorMetaEl.setAttribute("content", THEME_COLOR_MODAL);
+    return;
+  }
+
+  themeColorMetaEl.setAttribute("content", THEME_COLOR_NORMAL);
+  requestAnimationFrame(() => {
+    themeColorMetaEl.setAttribute("content", "#e7ecbe");
+    requestAnimationFrame(() => {
+      themeColorMetaEl.setAttribute("content", THEME_COLOR_NORMAL);
+    });
+  });
 }
 
 function setupGlobalModalDismiss() {
@@ -526,3 +550,11 @@ applyStaticTranslations();
 setDpadVisible(localStorage.getItem(DPAD_STORAGE_KEY) === "1");
 updateBestScoreLabel();
 render();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch((error) => {
+      console.error("Service worker registration failed:", error);
+    });
+  });
+}

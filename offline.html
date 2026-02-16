@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#e7ecbf" />
+    <title>Snake - Offline</title>
+    <style>
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+      }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        background: linear-gradient(135deg, #d3fbfb 0%, #fbdd97 100%);
+        color: #1f1f1f;
+        display: grid;
+        place-items: center;
+        padding: calc(1rem + env(safe-area-inset-top)) 1rem calc(1rem + env(safe-area-inset-bottom));
+        box-sizing: border-box;
+      }
+      .card {
+        width: min(92vw, 420px);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #d4d4d4;
+        border-radius: 12px;
+        padding: 1rem;
+      }
+      h1 { margin: 0 0 0.5rem; font-size: 1.3rem; }
+      p { margin: 0 0 0.75rem; color: #555; }
+      button {
+        border: 1px solid #d4d4d4;
+        border-radius: 8px;
+        background: #fff;
+        color: #1f1f1f;
+        padding: 0.6rem 0.85rem;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Offline</h1>
+      <p>No network right now. Reconnect and retry.</p>
+      <button type="button" onclick="location.reload()">Retry</button>
+    </main>
+  </body>
+</html>

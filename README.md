@@ -3,7 +3,8 @@
 Minimal classic Snake implementation (no external dependencies).
 
 - Auto locale: German (`de`) if device/browser language is German, otherwise English.
-- App icons: `/assets/favicon.svg` and `/assets/apple-touch-icon.png`.
+- App icons: `/assets/snake-brand.png`, `/assets/icon-192.png`, `/assets/icon-512.png`, `/assets/apple-touch-icon-180.png`.
+- PWA support: `manifest.webmanifest` + `sw.js` for install/offline (iOS: Add to Home Screen), plus `offline.html` fallback screen.
 
 ## Run
 

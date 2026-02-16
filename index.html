@@ -2,26 +2,49 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Snake</title>
+    <meta name="theme-color" content="#1e8a4f" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Snake" />
+    <meta property="og:description" content="Classic Snake game for mobile and desktop." />
+    <meta property="og:image" content="./assets/snake-brand.png" />
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="Snake" />
+    <meta property="twitter:description" content="Classic Snake game for mobile and desktop." />
+    <meta property="twitter:image" content="./assets/snake-brand.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/snake-brand.png" />
+    <link rel="shortcut icon" href="./assets/snake-brand.png" />
+    <link rel="apple-touch-icon" href="./assets/snake-brand.png" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
       <header class="hud">
-        <div class="title-row">
-          <h1>Snake</h1>
+        <div class="hud-top">
+          <div class="brand">
+            <img class="brand-logo" src="./assets/snake-brand.png" alt="" aria-hidden="true" />
+            <h1 id="brand-title">Snake</h1>
+          </div>
           <button
+            id="info-button"
             class="icon-button"
             type="button"
-            popovertarget="controls-popover"
-            aria-label="Open controls info"
+            aria-label="Open settings"
           >
-            Info
+            i
           </button>
         </div>
         <div class="stats">
-          <span>Score: <strong id="score">0</strong></span>
+          <span id="current-score-row" class="score-row"
+            ><span id="current-score-label">Score</span>: <strong id="score">0</strong></span
+          >
+          <span id="best-score-row" class="score-row"
+            ><span id="best-score-label">Best</span>: <strong id="best-score">-</strong></span
+          >
           <span id="status">Running</span>
         </div>
       </header>
@@ -30,20 +53,56 @@
         <canvas id="game" width="400" height="400" aria-label="Snake game board"></canvas>
       </div>
 
-      <section id="controls-popover" class="controls-popover" popover aria-label="Game controls">
-        <p class="help">Swipe on board to steer. Tap board edge area for quick turn.</p>
-        <div class="controls" aria-label="Game controls">
-          <button type="button" data-dir="up">Up</button>
-          <div class="row">
-            <button type="button" data-dir="left">Left</button>
-            <button type="button" data-action="pause">Pause</button>
-            <button type="button" data-dir="right">Right</button>
-          </div>
-          <button type="button" data-dir="down">Down</button>
-          <button type="button" data-action="restart">Restart</button>
+      <section id="game-over-modal" class="game-over-modal" hidden aria-label="Game over dialog">
+        <div class="modal-header">
+          <h2 id="game-over-title" class="modal-title">Game Over</h2>
+          <button
+            id="game-over-close"
+            class="icon-button modal-close"
+            type="button"
+            aria-label="Close dialog"
+          >
+            ×
+          </button>
         </div>
-        <p class="help">Keyboard: Arrow keys or WASD, Space to pause, R to restart.</p>
+        <p id="game-over-score"></p>
+        <p id="game-over-compare"></p>
+        <p id="game-over-message" class="game-over-message"></p>
       </section>
+
+      <section id="controls-popover" class="controls-popover" hidden aria-label="Game controls">
+        <div class="modal-header">
+          <h2 id="settings-title" class="modal-title">Settings</h2>
+          <button
+            id="settings-close"
+            class="icon-button modal-close"
+            type="button"
+            aria-label="Close dialog"
+          >
+            ×
+          </button>
+        </div>
+        <p id="help-touch" class="help">Swipe on board to steer. Tap board for quick turns.</p>
+        <div id="settings-row" class="settings-row">
+          <label id="toggle-dpad-label" for="toggle-dpad">Show arrows under board</label>
+          <input id="toggle-dpad" class="toggle-switch" type="checkbox" role="switch" />
+        </div>
+        <button id="restart-button" type="button" data-action="restart">Restart</button>
+        <p id="help-keyboard" class="help">Keyboard: Arrow keys or WASD, Space to pause, R to restart.</p>
+      </section>
+
+      <div class="pause-bar">
+        <button id="pause-button" type="button" data-action="pause">Start</button>
+      </div>
+
+      <div id="dpad" class="dpad" hidden aria-label="Directional controls">
+        <button type="button" class="dpad-up" data-dir="up" aria-label="Up">↑</button>
+        <button type="button" class="dpad-left" data-dir="left" aria-label="Left">←</button>
+        <button type="button" class="dpad-right" data-dir="right" aria-label="Right">→</button>
+        <button type="button" class="dpad-down" data-dir="down" aria-label="Down">↓</button>
+      </div>
+
+      <div id="modal-backdrop" class="modal-backdrop" hidden></div>
     </main>
 
     <script type="module" src="./src/main.js"></script>

@@ -1,0 +1,82 @@
+const TRANSLATIONS = {
+  en: {
+    htmlLang: "en",
+    infoAria: "Open settings",
+    settingsTitle: "Settings",
+    closeDialog: "Close dialog",
+    currentScoreLabel: "Score",
+    bestScoreLabel: "Best",
+    statusReady: "Ready",
+    statusPaused: "Paused",
+    statusRunning: "Running",
+    statusGameOver: "Game Over",
+    gameOverYourScore: "Your score",
+    gameOverNewBest: "New best score. Excellent run.",
+    gameOverMatchBest: "You matched the best score.",
+    gameOverBehindBest: "Points to best score",
+    gameOverBestUnavailable: "Best score comparison not available yet.",
+    start: "Start",
+    pause: "Pause",
+    restartRound: "Restart",
+    helpTouch: "Swipe on board to steer. Tap board for quick turns.",
+    showArrows: "Show arrows under board",
+    restart: "Restart",
+    helpKeyboard: "Keyboard: Arrow keys or WASD, Space to pause, R to restart.",
+    boardAria: "Snake game board",
+    popoverAria: "Game controls",
+    dpadAria: "Directional controls",
+    upAria: "Up",
+    downAria: "Down",
+    leftAria: "Left",
+    rightAria: "Right",
+  },
+  de: {
+    htmlLang: "de",
+    infoAria: "Einstellungen öffnen",
+    settingsTitle: "Einstellungen",
+    closeDialog: "Dialog schließen",
+    currentScoreLabel: "Punkte",
+    bestScoreLabel: "Bestwert",
+    statusReady: "Bereit",
+    statusPaused: "Pausiert",
+    statusRunning: "Läuft",
+    statusGameOver: "Game Over",
+    gameOverYourScore: "Dein Score",
+    gameOverNewBest: "Neuer Bestwert. Stark gespielt.",
+    gameOverMatchBest: "Du hast den Bestwert erreicht.",
+    gameOverBehindBest: "Punkte bis zum Bestwert",
+    gameOverBestUnavailable: "Bestwert-Vergleich ist noch nicht verfügbar.",
+    start: "Start",
+    pause: "Pause",
+    restartRound: "Neu starten",
+    helpTouch: "Wische auf dem Spielfeld zum Lenken. Kurzer Tipp für schnelle Richtungswahl.",
+    showArrows: "Pfeiltasten unter dem Spielfeld anzeigen",
+    restart: "Neustart",
+    helpKeyboard: "Tastatur: Pfeiltasten oder WASD, Leertaste für Pause, R für Neustart.",
+    boardAria: "Schlange Spielfeld",
+    popoverAria: "Spielsteuerung",
+    dpadAria: "Richtungssteuerung",
+    upAria: "Hoch",
+    downAria: "Runter",
+    leftAria: "Links",
+    rightAria: "Rechts",
+  },
+};
+
+function detectLanguage() {
+  const candidates = navigator.languages?.length ? navigator.languages : [navigator.language];
+  const hasGerman = candidates.some((lang) => lang && lang.toLowerCase().startsWith("de"));
+  return hasGerman ? "de" : "en";
+}
+
+export function createI18n() {
+  const language = detectLanguage();
+  const active = TRANSLATIONS[language] ?? TRANSLATIONS.en;
+
+  return {
+    language,
+    t(key) {
+      return active[key] ?? TRANSLATIONS.en[key] ?? key;
+    },
+  };
+}

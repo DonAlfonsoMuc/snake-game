@@ -16,5 +16,6 @@ Minimal classic Snake implementation (no external dependencies).
 ## Controls
 
 - Keyboard: Arrow keys or `WASD`
+- Touch: swipe on the board to steer, short tap sets direction by tapped side
 - Pause: `Space` or on-screen `Pause`
 - Restart: `R` or on-screen `Restart`

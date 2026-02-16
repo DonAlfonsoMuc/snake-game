@@ -39,9 +39,20 @@ body {
   padding: 0.75rem;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .hud h1 {
   margin: 0;
   font-size: 1.25rem;
+}
+
+.icon-button {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.82rem;
 }
 
 .stats {
@@ -61,8 +72,17 @@ body {
   color: var(--muted);
 }
 
+.board-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
 #game {
   width: 100%;
+  max-width: 480px;
   aspect-ratio: 1 / 1;
   height: auto;
   border: 1px solid var(--border);
@@ -79,6 +99,20 @@ body {
   padding: 0.75rem;
   display: grid;
   gap: 0.5rem;
+}
+
+.controls-popover {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  max-width: min(92vw, 360px);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.controls-popover::backdrop {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .controls .row {

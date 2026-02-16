@@ -15,6 +15,8 @@ const ctx = canvas.getContext("2d");
 const scoreEl = document.getElementById("score");
 const statusEl = document.getElementById("status");
 const controls = document.querySelector(".controls");
+const SWIPE_MIN_DISTANCE = 24;
+let touchStart = null;
 
 canvas.width = GRID_SIZE * CELL;
 canvas.height = GRID_SIZE * CELL;
@@ -84,6 +86,22 @@ function onDirectionInput(direction) {
   state = setDirection(state, direction);
 }
 
+function directionFromDelta(dx, dy) {
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return dx > 0 ? "right" : "left";
+  }
+  return dy > 0 ? "down" : "up";
+}
+
+function directionFromTap(point) {
+  const rect = canvas.getBoundingClientRect();
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  const dx = point.x - centerX;
+  const dy = point.y - centerY;
+  return directionFromDelta(dx, dy);
+}
+
 document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
 
@@ -131,12 +149,46 @@ function handleControlInput(event) {
 }
 
 controls.addEventListener("click", handleControlInput);
-controls.addEventListener("pointerdown", (event) => {
+
+canvas.addEventListener("pointerdown", (event) => {
   if (event.pointerType !== "touch") {
     return;
   }
-  event.preventDefault();
-  handleControlInput(event);
+  const rect = canvas.getBoundingClientRect();
+  touchStart = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+});
+
+canvas.addEventListener("pointerup", (event) => {
+  if (event.pointerType !== "touch") {
+    return;
+  }
+  if (!touchStart) {
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  const end = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+  const dx = end.x - touchStart.x;
+  const dy = end.y - touchStart.y;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance >= SWIPE_MIN_DISTANCE) {
+    onDirectionInput(directionFromDelta(dx, dy));
+  } else {
+    onDirectionInput(directionFromTap(end));
+  }
+
+  touchStart = null;
+});
+
+canvas.addEventListener("pointercancel", () => {
+  touchStart = null;
 });
 
 setInterval(() => {

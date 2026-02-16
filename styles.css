@@ -1,0 +1,113 @@
+:root {
+  --bg: #f4f4f4;
+  --panel: #ffffff;
+  --text: #1f1f1f;
+  --muted: #666;
+  --accent: #1e8a4f;
+  --danger: #b5261e;
+  --border: #d4d4d4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.app {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 1rem;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.hud h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  font-size: 0.95rem;
+}
+
+#status.game-over {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+#status.paused {
+  color: var(--muted);
+}
+
+#game {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  display: block;
+  touch-action: none;
+}
+
+.controls {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.controls .row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+button {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  padding: 0.6rem 0.7rem;
+  font-size: 0.95rem;
+}
+
+button:active {
+  background: #ececec;
+}
+
+.help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+@media (min-width: 721px) {
+  .controls {
+    max-width: 340px;
+  }
+}

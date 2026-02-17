@@ -12,6 +12,9 @@ Minimal classic Snake implementation (no external dependencies).
    - `python3 -m http.server 5173`
 2. Open `http://localhost:5173`.
 
+## Demo
+https://donalfonsomuc.github.io/snake-game/
+
 ## Tests
 
 - Run core logic tests (Node 18+):

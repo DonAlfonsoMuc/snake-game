@@ -102,6 +102,7 @@ body {
   gap: 0.9rem;
   font-size: 1rem;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .score-row {
@@ -143,7 +144,8 @@ body {
 }
 
 .game-over-modal,
-.controls-popover {
+.controls-popover,
+.leaderboard-modal {
   margin: 0;
   position: fixed;
   inset: 50% auto auto 50%;
@@ -218,6 +220,35 @@ body {
 
 .game-over-message {
   color: var(--muted);
+}
+
+#leaderboard-button {
+  min-height: auto;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.85rem;
+}
+
+#player-name-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.95rem;
+  background: #fff;
+  color: var(--text);
+}
+
+.leaderboard-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.leaderboard-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
 }
 
 #game {

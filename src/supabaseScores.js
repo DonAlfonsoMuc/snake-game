@@ -63,3 +63,26 @@ export async function submitScore(score, playerName = null) {
     throw new Error(`Failed to submit score: ${response.status}`);
   }
 }
+
+export async function fetchTopScores(limit = 20) {
+  if (!isScoresApiConfigured()) {
+    return [];
+  }
+
+  const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
+  const response = await fetch(
+    buildUrl(
+      `/rest/v1/scores?select=player_name,score,created_at&order=score.desc,created_at.asc&limit=${safeLimit}`,
+    ),
+    {
+      method: "GET",
+      headers: buildHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch top scores: ${response.status}`);
+  }
+
+  return response.json();
+}

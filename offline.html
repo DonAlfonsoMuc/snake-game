@@ -45,5 +45,10 @@
       <p>No network right now. Reconnect and retry.</p>
       <button type="button" onclick="location.reload()">Retry</button>
     </main>
+    <script>
+      window.addEventListener("online", () => {
+        window.location.href = "./";
+      });
+    </script>
   </body>
 </html>

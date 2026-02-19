@@ -52,6 +52,7 @@
           <span id="best-score-row" class="score-row"
             ><span id="best-score-label">Best</span>: <strong id="best-score">-</strong></span
           >
+          <button id="leaderboard-button" type="button">Bestwerte</button>
           <span id="status">Running</span>
         </div>
       </header>
@@ -74,7 +75,27 @@
         </div>
         <p id="game-over-score"></p>
         <p id="game-over-compare"></p>
+        <label id="player-name-label" for="player-name-input">Name</label>
+        <input id="player-name-input" type="text" maxlength="24" autocomplete="name" />
+        <button id="save-score-button" type="button">Score speichern</button>
+        <p id="save-score-status" class="help"></p>
         <p id="game-over-message" class="game-over-message"></p>
+      </section>
+
+      <section id="leaderboard-modal" class="leaderboard-modal" hidden aria-label="Highscore dialog">
+        <div class="modal-header">
+          <h2 id="leaderboard-title" class="modal-title">Bestwerte</h2>
+          <button
+            id="leaderboard-close"
+            class="icon-button modal-close"
+            type="button"
+            aria-label="Close dialog"
+          >
+            ×
+          </button>
+        </div>
+        <ol id="leaderboard-list" class="leaderboard-list"></ol>
+        <p id="leaderboard-empty" class="help" hidden>Noch keine Einträge.</p>
       </section>
 
       <section id="controls-popover" class="controls-popover" hidden aria-label="Game controls">

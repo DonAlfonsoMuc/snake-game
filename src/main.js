@@ -7,6 +7,7 @@ import {
   togglePause,
 } from "./gameLogic.js";
 import {
+  fetchTopScores,
   fetchBestScore,
   isScoresApiConfigured,
   submitScore,
@@ -21,6 +22,7 @@ const ctx = canvas.getContext("2d");
 const infoButtonEl = document.getElementById("info-button");
 const currentScoreLabelEl = document.getElementById("current-score-label");
 const bestScoreLabelEl = document.getElementById("best-score-label");
+const leaderboardButtonEl = document.getElementById("leaderboard-button");
 const scoreEl = document.getElementById("score");
 const bestScoreEl = document.getElementById("best-score");
 const currentScoreRow = document.getElementById("current-score-row");
@@ -37,8 +39,17 @@ const gameOverModalEl = document.getElementById("game-over-modal");
 const gameOverTitleEl = document.getElementById("game-over-title");
 const gameOverScoreEl = document.getElementById("game-over-score");
 const gameOverCompareEl = document.getElementById("game-over-compare");
+const playerNameLabelEl = document.getElementById("player-name-label");
+const playerNameInputEl = document.getElementById("player-name-input");
+const saveScoreButtonEl = document.getElementById("save-score-button");
+const saveScoreStatusEl = document.getElementById("save-score-status");
 const gameOverMessageEl = document.getElementById("game-over-message");
 const gameOverCloseEl = document.getElementById("game-over-close");
+const leaderboardModalEl = document.getElementById("leaderboard-modal");
+const leaderboardTitleEl = document.getElementById("leaderboard-title");
+const leaderboardCloseEl = document.getElementById("leaderboard-close");
+const leaderboardListEl = document.getElementById("leaderboard-list");
+const leaderboardEmptyEl = document.getElementById("leaderboard-empty");
 const modalBackdropEl = document.getElementById("modal-backdrop");
 const pauseButton = document.getElementById("pause-button");
 const dpad = document.getElementById("dpad");
@@ -50,6 +61,7 @@ const dpadRightButton = document.querySelector(".dpad-right");
 const dpadDownButton = document.querySelector(".dpad-down");
 const SWIPE_MIN_DISTANCE = 24;
 const DPAD_STORAGE_KEY = "snake_show_dpad";
+const PLAYER_NAME_STORAGE_KEY = "snake_player_name";
 const i18n = createI18n();
 const themeColorMetaEl = document.querySelector('meta[name="theme-color"]');
 const THEME_COLOR_NORMAL = "#e7ecbf";
@@ -76,6 +88,7 @@ let scoreSubmittedForRound = false;
 let hasStarted = false;
 let gameOverReferenceBestScore = null;
 let gameOverMotivation = "";
+let topScores = [];
 
 canvas.width = GRID_SIZE * CELL;
 canvas.height = GRID_SIZE * CELL;
@@ -91,21 +104,122 @@ function applyStaticTranslations() {
   infoButtonEl.setAttribute("aria-label", i18n.t("infoAria"));
   currentScoreLabelEl.textContent = i18n.t("currentScoreLabel");
   bestScoreLabelEl.textContent = i18n.t("bestScoreLabel");
+  leaderboardButtonEl.textContent = i18n.t("leaderboardButton");
   helpTouchEl.textContent = i18n.t("helpTouch");
   settingsTitleEl.textContent = i18n.t("settingsTitle");
   settingsCloseEl.setAttribute("aria-label", i18n.t("closeDialog"));
   gameOverCloseEl.setAttribute("aria-label", i18n.t("closeDialog"));
+  playerNameLabelEl.textContent = i18n.t("playerNameLabel");
+  playerNameInputEl.placeholder = i18n.t("playerNamePlaceholder");
+  saveScoreButtonEl.textContent = i18n.t("saveScoreButton");
+  leaderboardTitleEl.textContent = i18n.t("leaderboardTitle");
+  leaderboardCloseEl.setAttribute("aria-label", i18n.t("closeDialog"));
+  leaderboardEmptyEl.textContent = i18n.t("leaderboardEmpty");
   toggleDpadLabelEl.textContent = i18n.t("showArrows");
   restartButtonEl.textContent = i18n.t("restart");
   helpKeyboardEl.textContent = i18n.t("helpKeyboard");
   canvas.setAttribute("aria-label", i18n.t("boardAria"));
   controlsPopover.setAttribute("aria-label", i18n.t("popoverAria"));
   gameOverModalEl.setAttribute("aria-label", i18n.t("statusGameOver"));
+  leaderboardModalEl.setAttribute("aria-label", i18n.t("leaderboardTitle"));
   dpad.setAttribute("aria-label", i18n.t("dpadAria"));
   dpadUpButton.setAttribute("aria-label", i18n.t("upAria"));
   dpadDownButton.setAttribute("aria-label", i18n.t("downAria"));
   dpadLeftButton.setAttribute("aria-label", i18n.t("leftAria"));
   dpadRightButton.setAttribute("aria-label", i18n.t("rightAria"));
+}
+
+function sanitizePlayerName(name) {
+  const trimmed = (name || "").trim().replace(/\s+/g, " ");
+  return trimmed.slice(0, 24);
+}
+
+function formatTopScoreEntry(entry) {
+  const player = sanitizePlayerName(entry.player_name) || i18n.t("anonymousName");
+  return `${player} - ${entry.score}`;
+}
+
+function renderLeaderboard() {
+  leaderboardListEl.innerHTML = "";
+  if (!topScores.length) {
+    leaderboardEmptyEl.hidden = false;
+    return;
+  }
+
+  leaderboardEmptyEl.hidden = true;
+  topScores.forEach((entry) => {
+    const li = document.createElement("li");
+    li.textContent = formatTopScoreEntry(entry);
+    leaderboardListEl.appendChild(li);
+  });
+}
+
+async function loadTopScores() {
+  if (!isScoresApiConfigured()) {
+    topScores = [];
+    renderLeaderboard();
+    return;
+  }
+
+  try {
+    topScores = await fetchTopScores(25);
+  } catch (error) {
+    console.error(error);
+    topScores = [];
+  }
+  renderLeaderboard();
+}
+
+async function submitScoreEntry(score, playerName, showStatus = false) {
+  if (scoreSubmittedForRound || score <= 0) {
+    if (showStatus) {
+      saveScoreStatusEl.textContent = i18n.t("saveAlreadyDone");
+    }
+    return;
+  }
+
+  if (!isScoresApiConfigured()) {
+    if (showStatus) {
+      saveScoreStatusEl.textContent = i18n.t("saveBackendUnavailable");
+    }
+    return;
+  }
+
+  scoreSubmittedForRound = true;
+  if (showStatus) {
+    saveScoreStatusEl.textContent = i18n.t("saveInProgress");
+  }
+
+  try {
+    await submitScore(score, playerName || null);
+    if (showStatus) {
+      saveScoreStatusEl.textContent = i18n.t("saveSuccess");
+    }
+
+    if (bestScore === null || score > bestScore) {
+      bestScore = score;
+      updateBestScoreLabel();
+    } else {
+      await loadBestScore();
+    }
+    await loadTopScores();
+  } catch (error) {
+    console.error(error);
+    scoreSubmittedForRound = false;
+    if (showStatus) {
+      saveScoreStatusEl.textContent = i18n.t("saveFailed");
+    }
+  }
+}
+
+function submitCurrentRoundScore(showStatus = false) {
+  const name = sanitizePlayerName(playerNameInputEl.value);
+  if (name) {
+    localStorage.setItem(PLAYER_NAME_STORAGE_KEY, name);
+  } else {
+    localStorage.removeItem(PLAYER_NAME_STORAGE_KEY);
+  }
+  return submitScoreEntry(state.score, name, showStatus);
 }
 
 function updateBestScoreLabel() {
@@ -154,6 +268,16 @@ function closeGameOverModal() {
   updateModalBackdrop();
 }
 
+function openLeaderboardModal() {
+  leaderboardModalEl.hidden = false;
+  updateModalBackdrop();
+}
+
+function closeLeaderboardModal() {
+  leaderboardModalEl.hidden = true;
+  updateModalBackdrop();
+}
+
 function openSettingsModal() {
   controlsPopover.hidden = false;
   updateModalBackdrop();
@@ -167,10 +291,11 @@ function closeSettingsModal() {
 function closeAllModals() {
   closeSettingsModal();
   closeGameOverModal();
+  closeLeaderboardModal();
 }
 
 function updateModalBackdrop() {
-  const hasOpenModal = !controlsPopover.hidden || !gameOverModalEl.hidden;
+  const hasOpenModal = !controlsPopover.hidden || !gameOverModalEl.hidden || !leaderboardModalEl.hidden;
   modalBackdropEl.hidden = !hasOpenModal;
   document.body.classList.toggle("modal-open", hasOpenModal);
   refreshThemeColor(hasOpenModal);
@@ -206,9 +331,6 @@ function setupGlobalModalDismiss() {
     if (!controlsPopover.hidden && !controlsPopover.contains(event.target) && !infoButtonEl.contains(event.target)) {
       closeSettingsModal();
     }
-    if (!gameOverModalEl.hidden && !gameOverModalEl.contains(event.target)) {
-      closeGameOverModal();
-    }
   });
 }
 
@@ -228,8 +350,17 @@ infoButtonEl.addEventListener("click", () => {
   openSettingsModal();
 });
 
+leaderboardButtonEl.addEventListener("click", async () => {
+  await loadTopScores();
+  openLeaderboardModal();
+});
+
 settingsCloseEl.addEventListener("click", () => {
   closeSettingsModal();
+});
+
+leaderboardCloseEl.addEventListener("click", () => {
+  closeLeaderboardModal();
 });
 
 pauseButton.addEventListener("click", () => {
@@ -240,7 +371,9 @@ gameOverCloseEl.addEventListener("click", () => {
   closeGameOverModal();
 });
 modalBackdropEl.addEventListener("click", () => {
-  closeAllModals();
+  if (!controlsPopover.hidden && gameOverModalEl.hidden && leaderboardModalEl.hidden) {
+    closeSettingsModal();
+  }
 });
 
 function updateHud() {
@@ -349,6 +482,10 @@ function startOrTogglePause() {
 }
 
 function restartGame() {
+  if (state.isGameOver && !scoreSubmittedForRound && state.score > 0) {
+    submitCurrentRoundScore(false);
+  }
+
   state = restartState(state);
   state = {
     ...state,
@@ -358,6 +495,7 @@ function restartGame() {
   scoreSubmittedForRound = false;
   gameOverReferenceBestScore = null;
   gameOverMotivation = "";
+  saveScoreStatusEl.textContent = "";
   closeGameOverModal();
 }
 
@@ -452,6 +590,10 @@ dpad.addEventListener("click", (event) => {
 dpadToggle.addEventListener("input", onDpadToggleChange);
 dpadToggle.addEventListener("change", onDpadToggleChange);
 
+saveScoreButtonEl.addEventListener("click", async () => {
+  await submitCurrentRoundScore(true);
+});
+
 canvas.addEventListener("pointerdown", (event) => {
   if (event.pointerType !== "touch") {
     return;
@@ -504,29 +646,11 @@ async function loadBestScore() {
   updateBestScoreLabel();
 }
 
-async function syncGameOverScore() {
-  if (!state.isGameOver || scoreSubmittedForRound || state.score <= 0) {
-    return;
-  }
-
-  scoreSubmittedForRound = true;
-
-  try {
-    await submitScore(state.score);
-    if (bestScore === null || state.score > bestScore) {
-      bestScore = state.score;
-      updateBestScoreLabel();
-    } else {
-      await loadBestScore();
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
-
 function onGameOver() {
   gameOverReferenceBestScore = bestScore;
   gameOverMotivation = getRandomGameOverMessage();
+  playerNameInputEl.value = localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "";
+  saveScoreStatusEl.textContent = "";
   updateGameOverCard();
   openGameOverModal();
 }
@@ -536,7 +660,6 @@ setInterval(() => {
   state = stepState(state);
   if (!wasGameOver && state.isGameOver) {
     onGameOver();
-    syncGameOverScore();
   }
   render();
 }, TICK_MS);

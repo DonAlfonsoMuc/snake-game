@@ -34,6 +34,7 @@ const helpTouchEl = document.getElementById("help-touch");
 const toggleDpadLabelEl = document.getElementById("toggle-dpad-label");
 const restartButtonEl = document.getElementById("restart-button");
 const helpKeyboardEl = document.getElementById("help-keyboard");
+const helpControllerEl = document.getElementById("help-controller");
 const settingsTitleEl = document.getElementById("settings-title");
 const settingsCloseEl = document.getElementById("settings-close");
 const gameOverModalEl = document.getElementById("game-over-modal");
@@ -64,6 +65,16 @@ const dpadLeftButton = document.querySelector(".dpad-left");
 const dpadRightButton = document.querySelector(".dpad-right");
 const dpadDownButton = document.querySelector(".dpad-down");
 const SWIPE_MIN_DISTANCE = 24;
+const GAMEPAD_DEADZONE = 0.55;
+const GAMEPAD_REPEAT_MS = 130;
+const INPUT_BUFFER_LIMIT = 3;
+const INPUT_DEDUPE_WINDOW_MS = 45;
+const OPPOSITES = {
+  up: "down",
+  down: "up",
+  left: "right",
+  right: "left",
+};
 const DPAD_STORAGE_KEY = "snake_show_dpad";
 const PLAYER_NAME_STORAGE_KEY = "snake_player_name";
 const i18n = createI18n();
@@ -95,6 +106,13 @@ let gameOverMotivation = "";
 let topScores = [];
 let recentScores = [];
 let leaderboardBusy = false;
+let gamepadLoopStarted = false;
+let gamepadPrevPausePressed = false;
+let gamepadPrevRestartPressed = false;
+let gamepadHeldDirection = null;
+let gamepadNextRepeatAt = 0;
+let queuedDirections = [];
+let lastDirectionInputAt = 0;
 
 canvas.width = GRID_SIZE * CELL;
 canvas.height = GRID_SIZE * CELL;
@@ -125,6 +143,7 @@ function applyStaticTranslations() {
   toggleDpadLabelEl.textContent = i18n.t("showArrows");
   restartButtonEl.textContent = i18n.t("restart");
   helpKeyboardEl.textContent = i18n.t("helpKeyboard");
+  helpControllerEl.textContent = i18n.t("helpController");
   canvas.setAttribute("aria-label", i18n.t("boardAria"));
   controlsPopover.setAttribute("aria-label", i18n.t("popoverAria"));
   gameOverModalEl.setAttribute("aria-label", i18n.t("statusGameOver"));
@@ -523,7 +542,147 @@ function render() {
 }
 
 function onDirectionInput(direction) {
-  state = setDirection(state, direction);
+  enqueueDirection(direction);
+}
+
+function enqueueDirection(direction) {
+  if (!OPPOSITES[direction]) {
+    return false;
+  }
+
+  const now = performance.now();
+  const lastQueued = queuedDirections[queuedDirections.length - 1] ?? null;
+  const effectiveDirection = lastQueued || state.pendingDirection || state.direction;
+
+  if (direction === effectiveDirection) {
+    return false;
+  }
+
+  if (direction === OPPOSITES[effectiveDirection]) {
+    return false;
+  }
+
+  if (lastQueued === direction && now - lastDirectionInputAt <= INPUT_DEDUPE_WINDOW_MS) {
+    return false;
+  }
+
+  if (queuedDirections.length >= INPUT_BUFFER_LIMIT) {
+    queuedDirections.shift();
+  }
+  queuedDirections.push(direction);
+  lastDirectionInputAt = now;
+  return true;
+}
+
+function applyNextQueuedDirection() {
+  if (!queuedDirections.length) {
+    return;
+  }
+  const next = queuedDirections.shift();
+  state = setDirection(state, next);
+}
+
+function isModalOpen() {
+  return !controlsPopover.hidden || !leaderboardModalEl.hidden || !gameOverModalEl.hidden;
+}
+
+function buttonPressed(button) {
+  if (!button) {
+    return false;
+  }
+  if (typeof button === "number") {
+    return button > 0.5;
+  }
+  return button.pressed || button.value > 0.5;
+}
+
+function readDirectionFromGamepad(gamepad) {
+  if (!gamepad) {
+    return null;
+  }
+
+  const up = buttonPressed(gamepad.buttons?.[12]);
+  const down = buttonPressed(gamepad.buttons?.[13]);
+  const left = buttonPressed(gamepad.buttons?.[14]);
+  const right = buttonPressed(gamepad.buttons?.[15]);
+
+  if (up && !down) return "up";
+  if (down && !up) return "down";
+  if (left && !right) return "left";
+  if (right && !left) return "right";
+
+  const x = Number(gamepad.axes?.[0] || 0);
+  const y = Number(gamepad.axes?.[1] || 0);
+  if (Math.abs(x) < GAMEPAD_DEADZONE && Math.abs(y) < GAMEPAD_DEADZONE) {
+    return null;
+  }
+
+  if (Math.abs(x) > Math.abs(y)) {
+    return x > 0 ? "right" : "left";
+  }
+  return y > 0 ? "down" : "up";
+}
+
+function handleGamepadInput(timestamp) {
+  if (isModalOpen()) {
+    gamepadHeldDirection = null;
+    gamepadPrevPausePressed = false;
+    gamepadPrevRestartPressed = false;
+    return;
+  }
+
+  const pads = typeof navigator.getGamepads === "function" ? navigator.getGamepads() : [];
+  let direction = null;
+  let pausePressed = false;
+  let restartPressed = false;
+
+  for (const pad of pads) {
+    if (!pad || !pad.connected) {
+      continue;
+    }
+    if (!direction) {
+      direction = readDirectionFromGamepad(pad);
+    }
+    pausePressed ||= buttonPressed(pad.buttons?.[0]) || buttonPressed(pad.buttons?.[9]);
+    restartPressed ||= buttonPressed(pad.buttons?.[3]);
+  }
+
+  if (direction) {
+    const shouldApply = direction !== gamepadHeldDirection || timestamp >= gamepadNextRepeatAt;
+    if (shouldApply) {
+      onBoardDirectionInput(direction);
+      gamepadHeldDirection = direction;
+      gamepadNextRepeatAt = timestamp + GAMEPAD_REPEAT_MS;
+      render();
+    }
+  } else {
+    gamepadHeldDirection = null;
+  }
+
+  if (pausePressed && !gamepadPrevPausePressed) {
+    startOrTogglePause();
+    render();
+  }
+  if (restartPressed && !gamepadPrevRestartPressed) {
+    restartGame();
+    render();
+  }
+
+  gamepadPrevPausePressed = pausePressed;
+  gamepadPrevRestartPressed = restartPressed;
+}
+
+function gamepadLoop(timestamp = 0) {
+  handleGamepadInput(timestamp);
+  requestAnimationFrame(gamepadLoop);
+}
+
+function startGamepadLoopIfSupported() {
+  if (gamepadLoopStarted || typeof navigator.getGamepads !== "function") {
+    return;
+  }
+  gamepadLoopStarted = true;
+  requestAnimationFrame(gamepadLoop);
 }
 
 function setDpadVisible(visible) {
@@ -565,6 +724,7 @@ function restartGame() {
   scoreSubmittedForRound = false;
   gameOverReferenceBestScore = null;
   gameOverMotivation = "";
+  queuedDirections = [];
   saveScoreStatusEl.textContent = "";
   closeGameOverModal();
 }
@@ -576,7 +736,7 @@ function onBoardDirectionInput(direction) {
   if (!hasStarted) {
     return;
   }
-  state = setDirection(state, direction);
+  enqueueDirection(direction);
   if (state.isPaused) {
     state = togglePause(state);
   }
@@ -621,6 +781,14 @@ document.addEventListener("keydown", (event) => {
     render();
   }
 });
+
+window.addEventListener("gamepadconnected", () => {
+  startGamepadLoopIfSupported();
+});
+
+window.addEventListener("pointerdown", () => {
+  startGamepadLoopIfSupported();
+}, { once: true });
 
 function handleControlInput(event) {
   const button = event.target.closest("button");
@@ -728,8 +896,10 @@ function onGameOver() {
 
 setInterval(() => {
   const wasGameOver = state.isGameOver;
+  applyNextQueuedDirection();
   state = stepState(state);
   if (!wasGameOver && state.isGameOver) {
+    queuedDirections = [];
     onGameOver();
   }
   render();
@@ -745,6 +915,7 @@ setDpadVisible(localStorage.getItem(DPAD_STORAGE_KEY) === "1");
 renderRecentScores();
 updateBestScoreLabel();
 render();
+startGamepadLoopIfSupported();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

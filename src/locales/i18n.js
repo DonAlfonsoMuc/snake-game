@@ -27,6 +27,8 @@ const TRANSLATIONS = {
     saveAlreadyDone: "This score is already saved.",
     saveBackendUnavailable: "Backend unavailable.",
     anonymousName: "Anonymous",
+    recentScoresTitle: "Last 100 results",
+    recentScoresCaption: "{count} recent runs (oldest to newest).",
     start: "Start",
     pause: "Pause",
     restartRound: "Restart",
@@ -70,6 +72,8 @@ const TRANSLATIONS = {
     saveAlreadyDone: "Dieser Score wurde bereits gespeichert.",
     saveBackendUnavailable: "Backend nicht verfügbar.",
     anonymousName: "Anonym",
+    recentScoresTitle: "Letzte 100 Ergebnisse",
+    recentScoresCaption: "{count} letzte Runden (von alt nach neu).",
     start: "Start",
     pause: "Pause",
     restartRound: "Neu starten",
@@ -99,8 +103,12 @@ export function createI18n() {
 
   return {
     language,
-    t(key) {
-      return active[key] ?? TRANSLATIONS.en[key] ?? key;
+    t(key, params = {}) {
+      const raw = active[key] ?? TRANSLATIONS.en[key] ?? key;
+      if (typeof raw !== "string") {
+        return raw;
+      }
+      return raw.replace(/\{(\w+)\}/g, (_, token) => String(params[token] ?? ""));
     },
   };
 }

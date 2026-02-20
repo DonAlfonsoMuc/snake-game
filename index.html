@@ -7,11 +7,11 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>Snake</title>
-    <meta name="theme-color" content="#e7ecbf" />
+    <meta name="theme-color" content="#d3fbfb" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Snake" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="format-detection" content="telephone=no" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Snake" />
@@ -79,6 +79,11 @@
         <input id="player-name-input" type="text" maxlength="24" autocomplete="name" />
         <button id="save-score-button" type="button">Score speichern</button>
         <p id="save-score-status" class="help"></p>
+        <section id="recent-scores-panel" class="recent-scores" hidden>
+          <h3 id="recent-scores-title">Letzte Ergebnisse</h3>
+          <div id="recent-scores-chart" class="recent-scores-chart"></div>
+          <p id="recent-scores-caption" class="help"></p>
+        </section>
         <p id="game-over-message" class="game-over-message"></p>
       </section>
 

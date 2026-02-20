@@ -8,6 +8,7 @@ import {
 } from "./gameLogic.js";
 import {
   fetchTopScores,
+  fetchRecentScores,
   fetchBestScore,
   isScoresApiConfigured,
   submitScore,
@@ -44,6 +45,10 @@ const playerNameInputEl = document.getElementById("player-name-input");
 const saveScoreButtonEl = document.getElementById("save-score-button");
 const saveScoreStatusEl = document.getElementById("save-score-status");
 const gameOverMessageEl = document.getElementById("game-over-message");
+const recentScoresPanelEl = document.getElementById("recent-scores-panel");
+const recentScoresTitleEl = document.getElementById("recent-scores-title");
+const recentScoresChartEl = document.getElementById("recent-scores-chart");
+const recentScoresCaptionEl = document.getElementById("recent-scores-caption");
 const gameOverCloseEl = document.getElementById("game-over-close");
 const leaderboardModalEl = document.getElementById("leaderboard-modal");
 const leaderboardTitleEl = document.getElementById("leaderboard-title");
@@ -54,7 +59,6 @@ const modalBackdropEl = document.getElementById("modal-backdrop");
 const pauseButton = document.getElementById("pause-button");
 const dpad = document.getElementById("dpad");
 const dpadToggle = document.getElementById("toggle-dpad");
-const settingsRowEl = document.getElementById("settings-row");
 const dpadUpButton = document.querySelector(".dpad-up");
 const dpadLeftButton = document.querySelector(".dpad-left");
 const dpadRightButton = document.querySelector(".dpad-right");
@@ -64,8 +68,8 @@ const DPAD_STORAGE_KEY = "snake_show_dpad";
 const PLAYER_NAME_STORAGE_KEY = "snake_player_name";
 const i18n = createI18n();
 const themeColorMetaEl = document.querySelector('meta[name="theme-color"]');
-const THEME_COLOR_NORMAL = "#e7ecbf";
-const THEME_COLOR_MODAL = "#d8dcb3";
+const THEME_COLOR_NORMAL = "#d3fbfb";
+const THEME_COLOR_MODAL = "#9faf9f";
 const GAME_OVER_MESSAGES = {
   de: [
     "Das war knapp. Einmal tief durchatmen und direkt die naechste Runde starten.",
@@ -89,6 +93,8 @@ let hasStarted = false;
 let gameOverReferenceBestScore = null;
 let gameOverMotivation = "";
 let topScores = [];
+let recentScores = [];
+let leaderboardBusy = false;
 
 canvas.width = GRID_SIZE * CELL;
 canvas.height = GRID_SIZE * CELL;
@@ -115,6 +121,7 @@ function applyStaticTranslations() {
   leaderboardTitleEl.textContent = i18n.t("leaderboardTitle");
   leaderboardCloseEl.setAttribute("aria-label", i18n.t("closeDialog"));
   leaderboardEmptyEl.textContent = i18n.t("leaderboardEmpty");
+  recentScoresTitleEl.textContent = i18n.t("recentScoresTitle");
   toggleDpadLabelEl.textContent = i18n.t("showArrows");
   restartButtonEl.textContent = i18n.t("restart");
   helpKeyboardEl.textContent = i18n.t("helpKeyboard");
@@ -154,6 +161,30 @@ function renderLeaderboard() {
   });
 }
 
+function renderRecentScores() {
+  recentScoresChartEl.innerHTML = "";
+  if (!recentScores.length) {
+    recentScoresPanelEl.hidden = true;
+    recentScoresCaptionEl.textContent = "";
+    return;
+  }
+
+  recentScoresPanelEl.hidden = false;
+  const maxScore = Math.max(1, ...recentScores.map((entry) => Number(entry.score) || 0));
+  const ordered = [...recentScores].reverse();
+
+  ordered.forEach((entry) => {
+    const score = Number(entry.score) || 0;
+    const bar = document.createElement("span");
+    bar.className = "recent-score-bar";
+    bar.style.height = `${Math.max(4, Math.round((score / maxScore) * 100))}%`;
+    bar.title = `${sanitizePlayerName(entry.player_name) || i18n.t("anonymousName")}: ${score}`;
+    recentScoresChartEl.appendChild(bar);
+  });
+
+  recentScoresCaptionEl.textContent = i18n.t("recentScoresCaption", { count: recentScores.length });
+}
+
 async function loadTopScores() {
   if (!isScoresApiConfigured()) {
     topScores = [];
@@ -168,6 +199,22 @@ async function loadTopScores() {
     topScores = [];
   }
   renderLeaderboard();
+}
+
+async function loadRecentScores() {
+  if (!isScoresApiConfigured()) {
+    recentScores = [];
+    renderRecentScores();
+    return;
+  }
+
+  try {
+    recentScores = await fetchRecentScores(100);
+  } catch (error) {
+    console.error(error);
+    recentScores = [];
+  }
+  renderRecentScores();
 }
 
 async function submitScoreEntry(score, playerName, showStatus = false) {
@@ -260,31 +307,37 @@ function updateGameOverCard() {
 
 function openGameOverModal() {
   gameOverModalEl.hidden = false;
+  gameOverModalEl.setAttribute("aria-modal", "true");
   updateModalBackdrop();
 }
 
 function closeGameOverModal() {
   gameOverModalEl.hidden = true;
+  gameOverModalEl.removeAttribute("aria-modal");
   updateModalBackdrop();
 }
 
 function openLeaderboardModal() {
   leaderboardModalEl.hidden = false;
+  leaderboardModalEl.setAttribute("aria-modal", "true");
   updateModalBackdrop();
 }
 
 function closeLeaderboardModal() {
   leaderboardModalEl.hidden = true;
+  leaderboardModalEl.removeAttribute("aria-modal");
   updateModalBackdrop();
 }
 
 function openSettingsModal() {
   controlsPopover.hidden = false;
+  controlsPopover.setAttribute("aria-modal", "true");
   updateModalBackdrop();
 }
 
 function closeSettingsModal() {
   controlsPopover.hidden = true;
+  controlsPopover.removeAttribute("aria-modal");
   updateModalBackdrop();
 }
 
@@ -313,7 +366,7 @@ function refreshThemeColor(hasOpenModal) {
 
   themeColorMetaEl.setAttribute("content", THEME_COLOR_NORMAL);
   requestAnimationFrame(() => {
-    themeColorMetaEl.setAttribute("content", "#e7ecbe");
+    themeColorMetaEl.setAttribute("content", "#fbdd97");
     requestAnimationFrame(() => {
       themeColorMetaEl.setAttribute("content", THEME_COLOR_NORMAL);
     });
@@ -323,7 +376,16 @@ function refreshThemeColor(hasOpenModal) {
 function setupGlobalModalDismiss() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
-      closeAllModals();
+      if (!controlsPopover.hidden) {
+        closeSettingsModal();
+        return;
+      }
+      if (!leaderboardModalEl.hidden) {
+        closeLeaderboardModal();
+      }
+      if (!gameOverModalEl.hidden) {
+        event.preventDefault();
+      }
     }
   });
 
@@ -338,22 +400,30 @@ function onDpadToggleChange(event) {
   setDpadVisible(event.target.checked);
 }
 
-settingsRowEl.addEventListener("click", (event) => {
-  if (event.target === dpadToggle) {
-    return;
-  }
-  dpadToggle.checked = !dpadToggle.checked;
-  setDpadVisible(dpadToggle.checked);
-});
-
 infoButtonEl.addEventListener("click", () => {
   openSettingsModal();
 });
 
-leaderboardButtonEl.addEventListener("click", async () => {
-  await loadTopScores();
-  openLeaderboardModal();
-});
+async function openLeaderboardWithData(event) {
+  if (event) {
+    event.preventDefault();
+  }
+  if (leaderboardBusy) {
+    return;
+  }
+  leaderboardBusy = true;
+  leaderboardButtonEl.disabled = true;
+  try {
+    await loadTopScores();
+    openLeaderboardModal();
+  } finally {
+    leaderboardBusy = false;
+    leaderboardButtonEl.disabled = false;
+  }
+}
+
+leaderboardButtonEl.addEventListener("click", openLeaderboardWithData);
+leaderboardButtonEl.addEventListener("touchend", openLeaderboardWithData, { passive: false });
 
 settingsCloseEl.addEventListener("click", () => {
   closeSettingsModal();
@@ -371,7 +441,7 @@ gameOverCloseEl.addEventListener("click", () => {
   closeGameOverModal();
 });
 modalBackdropEl.addEventListener("click", () => {
-  if (!controlsPopover.hidden && gameOverModalEl.hidden && leaderboardModalEl.hidden) {
+  if (!controlsPopover.hidden) {
     closeSettingsModal();
   }
 });
@@ -652,6 +722,7 @@ function onGameOver() {
   playerNameInputEl.value = localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "";
   saveScoreStatusEl.textContent = "";
   updateGameOverCard();
+  loadRecentScores();
   openGameOverModal();
 }
 
@@ -671,6 +742,7 @@ closeAllModals();
 setupGlobalModalDismiss();
 applyStaticTranslations();
 setDpadVisible(localStorage.getItem(DPAD_STORAGE_KEY) === "1");
+renderRecentScores();
 updateBestScoreLabel();
 render();
 

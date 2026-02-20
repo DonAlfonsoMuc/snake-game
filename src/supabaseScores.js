@@ -86,3 +86,26 @@ export async function fetchTopScores(limit = 20) {
 
   return response.json();
 }
+
+export async function fetchRecentScores(limit = 100) {
+  if (!isScoresApiConfigured()) {
+    return [];
+  }
+
+  const safeLimit = Math.max(1, Math.min(100, Number(limit) || 100));
+  const response = await fetch(
+    buildUrl(
+      `/rest/v1/scores?select=player_name,score,created_at&order=created_at.desc&limit=${safeLimit}`,
+    ),
+    {
+      method: "GET",
+      headers: buildHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch recent scores: ${response.status}`);
+  }
+
+  return response.json();
+}

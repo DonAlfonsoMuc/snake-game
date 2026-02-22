@@ -64,6 +64,7 @@ const dpadUpButton = document.querySelector(".dpad-up");
 const dpadLeftButton = document.querySelector(".dpad-left");
 const dpadRightButton = document.querySelector(".dpad-right");
 const dpadDownButton = document.querySelector(".dpad-down");
+const landscapeMediaQuery = window.matchMedia("(orientation: landscape)");
 const SWIPE_MIN_DISTANCE = 24;
 const GAMEPAD_DEADZONE = 0.55;
 const GAMEPAD_REPEAT_MS = 130;
@@ -416,7 +417,12 @@ function setupGlobalModalDismiss() {
 }
 
 function onDpadToggleChange(event) {
-  setDpadVisible(event.target.checked);
+  if (landscapeMediaQuery.matches) {
+    syncDpadVisibility();
+    return;
+  }
+  setDpadPreference(event.target.checked);
+  syncDpadVisibility();
 }
 
 infoButtonEl.addEventListener("click", () => {
@@ -685,10 +691,16 @@ function startGamepadLoopIfSupported() {
   requestAnimationFrame(gamepadLoop);
 }
 
-function setDpadVisible(visible) {
+function setDpadPreference(visible) {
+  localStorage.setItem(DPAD_STORAGE_KEY, visible ? "1" : "0");
+}
+
+function syncDpadVisibility() {
+  const preferredVisible = localStorage.getItem(DPAD_STORAGE_KEY) === "1";
+  const visible = landscapeMediaQuery.matches || preferredVisible;
   dpad.hidden = !visible;
   dpadToggle.checked = visible;
-  localStorage.setItem(DPAD_STORAGE_KEY, visible ? "1" : "0");
+  dpadToggle.disabled = landscapeMediaQuery.matches;
 }
 
 function startOrTogglePause() {
@@ -827,6 +839,11 @@ dpad.addEventListener("click", (event) => {
 
 dpadToggle.addEventListener("input", onDpadToggleChange);
 dpadToggle.addEventListener("change", onDpadToggleChange);
+if (typeof landscapeMediaQuery.addEventListener === "function") {
+  landscapeMediaQuery.addEventListener("change", syncDpadVisibility);
+} else if (typeof landscapeMediaQuery.addListener === "function") {
+  landscapeMediaQuery.addListener(syncDpadVisibility);
+}
 
 saveScoreButtonEl.addEventListener("click", async () => {
   await submitCurrentRoundScore(true);
@@ -911,7 +928,7 @@ if (isScoresApiConfigured()) {
 closeAllModals();
 setupGlobalModalDismiss();
 applyStaticTranslations();
-setDpadVisible(localStorage.getItem(DPAD_STORAGE_KEY) === "1");
+syncDpadVisibility();
 renderRecentScores();
 updateBestScoreLabel();
 render();
